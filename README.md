@@ -1,6 +1,6 @@
 # twkwk
 
-A minimal server for [TiddlyWiki 5](https://tiddlywiki.com/) which serves
+A barebones server for [TiddlyWiki 5](https://tiddlywiki.com/) which serves
 the wiki on any path and handles saving and backups.
 
 Backups are not automatically cleaned, so you might wanna set up a cron job
