@@ -1,0 +1,13 @@
+[package]
+authors = ["steinuil <steenuil.owl@gmail.com>"]
+edition = "2018"
+name = "twkwk"
+version = "0.1.0"
+
+[dependencies]
+clap = "3.0.0-beta.2"
+futures = "0.3"
+hyper = "0.13"
+log = "0.4"
+simple_logger = "1.11"
+tokio = {version = "0.2", features = ["full"]}
