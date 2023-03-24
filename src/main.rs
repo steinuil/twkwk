@@ -1,10 +1,10 @@
-use clap::Clap;
-use futures::FutureExt;
+use clap::Parser;
 use hyper::{
     body,
     http::Result as HyperResult,
+    server::Server,
     service::{make_service_fn, service_fn},
-    Body, Method, Request, Response, Server, StatusCode,
+    Body, Method, Request, Response, StatusCode,
 };
 use log::{error, info};
 use simple_logger::SimpleLogger;
@@ -18,15 +18,16 @@ use std::{
 };
 use tokio::fs;
 
-#[derive(Clap, Clone)]
+#[derive(Parser, Clone)]
+#[command(version)]
 struct Config {
-    #[clap(long)]
+    #[arg(long)]
     wiki_file: String,
-    #[clap(long)]
+    #[arg(long)]
     backup_dir: String,
-    #[clap(long, default_value = "0.0.0.0")]
+    #[arg(long, default_value = "0.0.0.0")]
     address: String,
-    #[clap(long)]
+    #[arg(long)]
     port: u16,
 }
 
@@ -36,7 +37,7 @@ fn gen_backup_filename(backup_dir: &str) -> PathBuf {
         .unwrap()
         .as_millis();
 
-    Path::new(backup_dir).join(&format!("backup.{}.html", now))
+    Path::new(backup_dir).join(format!("backup.{}.html", now))
 }
 
 async fn update_wiki(config: Config, body: Body) -> Result<(), String> {
@@ -124,17 +125,13 @@ async fn main() {
         .unwrap();
 
     let backup_fname = gen_backup_filename(&config.backup_dir);
-    match fs::copy(&config.wiki_file, &backup_fname).await {
-        Err(err) => {
-            error!(
-                "failed to back up wiki file to {}: {}",
-                &backup_fname.display(),
-                err
-            );
-            process::exit(1);
-        }
-
-        Ok(_) => (),
+    if let Err(err) = fs::copy(&config.wiki_file, &backup_fname).await {
+        error!(
+            "failed to back up wiki file to {}: {}",
+            &backup_fname.display(),
+            err
+        );
+        process::exit(1);
     };
 
     let address = IpAddr::from_str(&config.address)
@@ -152,10 +149,11 @@ async fn main() {
 
     info!("started server on {}:{}", address, config.port);
 
-    tokio::spawn(tokio::signal::ctrl_c().map(|_| {
+    tokio::spawn(async {
+        let _ = tokio::signal::ctrl_c().await;
         info!("shutting down");
         process::exit(0);
-    }));
+    });
 
     if let Err(e) = server.await {
         error!("server error: {}", e)
